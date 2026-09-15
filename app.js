@@ -2,34 +2,37 @@ const STORAGE_KEY = "tiny-diary.entries.v1";
 
 const moods = {
   happy: {
-    label: "うれしい",
-    face: "😊",
+    label: "絶好調",
+    face: "✨",
     score: 5,
   },
   calm: {
-    label: "おだやか",
-    face: "😌",
+    label: "集中！",
+    face: "🙂",
     score: 4,
   },
   normal: {
     label: "ふつう",
-    face: "🙂",
+    face: "😐",
     score: 3,
   },
   tired: {
-    label: "つかれた",
-    face: "😵‍💫",
+    label: "微妙",
+    face: "😵",
     score: 2,
   },
   sad: {
-    label: "しょんぼり",
-    face: "🥲",
+    label: "ないよりマシ",
+    face: "😓",
     score: 1,
   },
 };
 
+const categories = ["英語", "プログラミング", "読書"];
+
 const form = document.querySelector("#diary-form");
 const dateInput = document.querySelector("#entry-date");
+const categoryInput = document.querySelector("#entry-category");
 const noteInput = document.querySelector("#entry-note");
 const clearButton = document.querySelector("#clear-button");
 const entryList = document.querySelector("#entry-list");
@@ -39,13 +42,16 @@ const charCount = document.querySelector("#char-count");
 const editingLabel = document.querySelector("#editing-label");
 const entryCount = document.querySelector("#entry-count");
 const summaryRow = document.querySelector("#summary-row");
+const categoryChart = document.querySelector("#category-chart");
 const searchInput = document.querySelector("#search-input");
 const moodFilter = document.querySelector("#mood-filter");
 const rhythmChart = document.querySelector("#rhythm-chart");
 const biorhythmMessage = document.querySelector("#biorhythm-message");
 const biorhythmDetail = document.querySelector("#biorhythm-detail");
+const loadMoreButton = document.querySelector("#load-more-button");
 
 let entries = loadEntries();
+let visibleEntriesCount = 5;
 
 function loadEntries() {
   const rawEntries = localStorage.getItem(STORAGE_KEY);
@@ -92,6 +98,10 @@ function getSelectedMood() {
   return form.elements.mood.value;
 }
 
+function getSelectedCategory() {
+  return categoryInput.value || "英語";
+}
+
 function setSelectedMood(mood) {
   const moodInput = form.querySelector(`input[name="mood"][value="${mood}"]`);
 
@@ -132,34 +142,53 @@ function escapeHtml(text) {
     .replaceAll("'", "&#039;");
 }
 
+function getCategoryClass(category) {
+  switch (category) {
+    case "英語":
+      return "category-red";
+    case "プログラミング":
+      return "category-blue";
+    case "読書":
+      return "category-green";
+    default:
+      return "category-red";
+  }
+}
+
 function getFilteredEntries() {
   const query = searchInput.value.trim().toLowerCase();
-  const selectedMood = moodFilter.value;
+  const selectedCategory = moodFilter.value;
 
   return entries.filter((entry) => {
     const mood = moods[entry.mood];
-    const matchesMood = selectedMood === "all" || entry.mood === selectedMood;
-    const searchableText = `${entry.date} ${entry.note} ${mood?.label ?? ""}`.toLowerCase();
+    const entryCategory = entry.category ?? "英語";
+    const matchesCategory = selectedCategory === "all" || entryCategory === selectedCategory;
+    const searchableText = `${entry.date} ${entry.note ?? ""} ${entryCategory} ${mood?.label ?? ""}`.toLowerCase();
     const matchesQuery = !query || searchableText.includes(query);
 
-    return matchesMood && matchesQuery;
+    return matchesCategory && matchesQuery;
   });
 }
 
 function renderEntries() {
   const filteredEntries = getFilteredEntries();
+  const visibleEntries = filteredEntries.slice(0, visibleEntriesCount);
+  const hasMoreEntries = filteredEntries.length > visibleEntries.length;
 
-  entryList.innerHTML = filteredEntries
+  entryList.innerHTML = visibleEntries
     .map((entry) => {
       const mood = moods[entry.mood] ?? moods.normal;
+      const noteText = entry.note?.trim();
+      const displayNote = noteText ? `${mood.face} ${escapeHtml(noteText)}` : "メモなし";
+      const categoryClass = getCategoryClass(entry.category ?? "英語");
 
       return `
         <li class="entry-card">
           <div class="entry-topline">
             <span class="entry-date">${formatDate(entry.date)}</span>
-            <span class="mood-badge">${mood.face} ${mood.label}</span>
+            <span class="mood-badge ${categoryClass}">${entry.category ?? "英語"}</span>
           </div>
-          <p class="entry-note">${escapeHtml(entry.note)}</p>
+          <p class="entry-note ${noteText ? "" : "entry-note-empty"}" data-mood="${mood.face}">${noteText ? escapeHtml(noteText) : "メモなし"}</p>
           <div class="entry-actions">
             <button type="button" data-action="edit" data-date="${entry.date}">編集</button>
             <button class="danger-button" type="button" data-action="delete" data-date="${entry.date}">削除</button>
@@ -169,10 +198,12 @@ function renderEntries() {
     })
     .join("");
 
+  loadMoreButton.hidden = !hasMoreEntries;
+
   if (entries.length > 0 && filteredEntries.length === 0) {
     emptyState.innerHTML = `
       <strong>条件に合う記録がありません</strong>
-      <span>検索ワードや気分フィルターを変えてみてください。</span>
+      <span>検索ワードやカテゴリの絞り込みを変えてみてください。</span>
     `;
   } else {
     emptyState.innerHTML = `
@@ -196,11 +227,37 @@ function renderSummary() {
     .join("");
 }
 
+function renderCategorySummary() {
+  const counts = categories.map((category) => {
+    return {
+      category,
+      count: entries.filter((entry) => (entry.category ?? "英語") === category).length,
+    };
+  });
+  const maxCount = Math.max(...counts.map((item) => item.count), 1);
+
+  categoryChart.innerHTML = counts
+    .map(
+      ({ category, count }) => `
+        <div class="category-row">
+          <div class="category-label-row">
+            <span>${category}</span>
+            <strong>${count}</strong>
+          </div>
+          <div class="category-bar-track">
+            <span class="category-bar" style="width: ${(count / maxCount) * 100}%"></span>
+          </div>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function renderBiorhythm() {
   if (entries.length === 0) {
     rhythmChart.innerHTML = "";
     biorhythmMessage.textContent = "記録を保存すると表示されます";
-    biorhythmDetail.textContent = "最近7件の気分を波形グラフで表示します。";
+    biorhythmDetail.textContent = "最近7件の集中の変化を波形グラフで表示します。";
     return;
   }
 
@@ -338,39 +395,40 @@ function buildSinglePointWave(point, chartWidth) {
 
 function getBiorhythmMessage(trend, average, entryLength) {
   if (entryLength === 1) {
-    return "最初のリズムを記録しました";
+    return "最初の集中を記録しました";
   }
 
   if (trend >= 2) {
-    return "上向きのリズム";
+    return "集中が上向いています";
   }
 
   if (trend >= 0.5) {
-    return "少し上向き";
+    return "少し集中が上がっています";
   }
 
   if (trend <= -2) {
-    return "休むサイン多め";
+    return "集中が落ちている日が続いています";
   }
 
   if (trend <= -0.5) {
-    return "少し下がり気味";
+    return "少し集中が落ち気味です";
   }
 
   if (average >= 4) {
-    return "安定していい流れ";
+    return "安定してよく集中できています";
   }
 
   if (average <= 2.2) {
-    return "ゆっくり整えたいリズム";
+    return "取り組み方を整えられると良さそうです";
   }
 
-  return "安定したリズム";
+  return "安定した集中の流れです";
 }
 
 function render() {
   sortEntries();
   renderSummary();
+  renderCategorySummary();
   renderBiorhythm();
   renderEntries();
 }
@@ -378,8 +436,10 @@ function render() {
 function resetForm() {
   form.reset();
   dateInput.value = getTodayIso();
+  categoryInput.value = "英語";
   clearSelectedMood();
   noteInput.value = "";
+  visibleEntriesCount = 5;
   editingLabel.textContent = "今日の記録を書いています";
   updateCharCount();
   updateSaveState("未保存");
@@ -396,8 +456,9 @@ function updateSaveState(text) {
 
 function loadEntryIntoForm(entry) {
   dateInput.value = entry.date;
+  categoryInput.value = entry.category || "英語";
   setSelectedMood(entry.mood);
-  noteInput.value = entry.note;
+  noteInput.value = entry.note || "";
   editingLabel.textContent = `${formatDate(entry.date)}の記録を編集中`;
   updateCharCount();
   updateSaveState("編集中");
@@ -409,9 +470,10 @@ form.addEventListener("submit", (event) => {
 
   const date = dateInput.value;
   const mood = getSelectedMood();
+  const category = getSelectedCategory();
   const note = noteInput.value.trim();
 
-  if (!date || !mood || !note) {
+  if (!date || !mood) {
     updateSaveState("入力を確認");
     return;
   }
@@ -421,6 +483,7 @@ form.addEventListener("submit", (event) => {
   const nextEntry = {
     id: existingIndex >= 0 ? entries[existingIndex].id : createId(),
     date,
+    category,
     mood,
     note,
     createdAt: existingIndex >= 0 ? entries[existingIndex].createdAt : now,
@@ -451,6 +514,7 @@ dateInput.addEventListener("change", () => {
     return;
   }
 
+  categoryInput.value = "英語";
   clearSelectedMood();
   noteInput.value = "";
   editingLabel.textContent = `${formatDate(dateInput.value)}の記録を書いています`;
@@ -506,9 +570,20 @@ entryList.addEventListener("click", (event) => {
   }
 });
 
-searchInput.addEventListener("input", renderEntries);
-moodFilter.addEventListener("change", renderEntries);
+searchInput.addEventListener("input", () => {
+  visibleEntriesCount = 5;
+  renderEntries();
+});
+moodFilter.addEventListener("change", () => {
+  visibleEntriesCount = 5;
+  renderEntries();
+});
+loadMoreButton.addEventListener("click", () => {
+  visibleEntriesCount += 5;
+  renderEntries();
+});
 
 dateInput.value = getTodayIso();
+categoryInput.value = "英語";
 updateCharCount();
 render();

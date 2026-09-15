@@ -300,6 +300,48 @@ textarea:focus {
   margin-bottom: 18px;
 }
 
+.category-panel {
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fff7f3, #fffefb);
+  padding: 14px 14px 10px;
+}
+
+.category-chart {
+  display: grid;
+  gap: 10px;
+}
+
+.category-row {
+  display: grid;
+  gap: 6px;
+}
+
+.category-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.category-bar-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(229, 221, 208, 0.8);
+}
+
+.category-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6aa9ff, #79c7b3, #ffd166, #f47fa2);
+}
+
 .biorhythm {
   display: grid;
   gap: 10px;
@@ -453,6 +495,10 @@ textarea:focus {
   gap: 12px;
 }
 
+.entry-meta-row {
+  justify-content: flex-start;
+}
+
 .entry-date {
   font-size: 1rem;
   font-weight: 900;
@@ -471,12 +517,57 @@ textarea:focus {
   font-weight: 900;
 }
 
+.category-red {
+  background: #fde8e8;
+  color: #b42318;
+}
+
+.category-blue {
+  background: #eaf3ff;
+  color: #1d4ed8;
+}
+
+.category-green {
+  background: #eafaf1;
+  color: #157f4b;
+}
+
 .entry-note {
   margin: 0;
   color: #413c36;
   line-height: 1.7;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+  font-weight: 600;
+}
+
+.entry-note::before {
+  content: attr(data-mood);
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 1.4rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.entry-note-empty {
+  color: #a9a29b;
+}
+
+.entry-note-empty::before {
+  content: "";
+  margin-right: 0;
+}
+
+.load-more-button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffefb;
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .entry-actions {
@@ -502,7 +593,7 @@ textarea:focus {
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: 1fr;
-    width: min(640px, calc(100% - 24px));
+    width: min(640px, calc(100% - 20px));
     padding: 12px 0 24px;
   }
 
@@ -512,6 +603,11 @@ textarea:focus {
 }
 
 @media (max-width: 560px) {
+  .app-shell {
+    width: min(100%, calc(100% - 12px));
+    padding-top: 8px;
+  }
+
   .editor-panel,
   .history-panel {
     padding: 18px;
